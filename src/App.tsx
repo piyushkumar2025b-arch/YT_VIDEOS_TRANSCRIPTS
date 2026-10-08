@@ -112,7 +112,14 @@ export default function App() {
         }
 
         const data = await res.json();
-        setVideos(data.items || []);
+        const rawItems: VideoItem[] = data.items || [];
+        const seen = new Set<string>();
+        const uniqueItems = rawItems.filter((item) => {
+          if (!item.id || seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
+        setVideos(uniqueItems);
         setNextPageToken(data.nextPageToken || null);
       } catch (err: any) {
         console.error('Search error:', err);
@@ -144,7 +151,12 @@ export default function App() {
       if (!res.ok) throw new Error('Failed to load more videos');
 
       const data = await res.json();
-      setVideos((prev) => [...prev, ...(data.items || [])]);
+      const newItems: VideoItem[] = data.items || [];
+      setVideos((prev) => {
+        const existingIds = new Set(prev.map((v) => v.id));
+        const uniqueNew = newItems.filter((item) => item.id && !existingIds.has(item.id));
+        return [...prev, ...uniqueNew];
+      });
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
       console.error('Load more error:', err);
@@ -272,6 +284,35 @@ export default function App() {
               onSelectVideo={(vid) => fetchTranscript(vid)}
               query={searchQuery}
             />
+
+            {/* Active Video Floating Dock when exploring search */}
+            {activeVideo && (
+              <div className="sticky bottom-6 z-30 mx-auto max-w-xl">
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/95 p-3 text-white shadow-2xl backdrop-blur-md">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={activeVideo.thumbnailUrl}
+                      alt={activeVideo.title}
+                      className="h-9 w-14 rounded object-cover shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold truncate text-neutral-100">
+                        {activeVideo.title}
+                      </div>
+                      <div className="text-[11px] text-neutral-400 truncate">
+                        {activeVideo.channelTitle} · Ready in Studio
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setCurrentTab('studio')}
+                    className="rounded-lg bg-white px-3.5 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-100 transition-colors whitespace-nowrap shrink-0 shadow-xs"
+                  >
+                    Open Studio →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

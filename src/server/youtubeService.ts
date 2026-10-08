@@ -120,8 +120,15 @@ export async function searchWithYoutubeApi(
     };
   });
 
+  const seenApiIds = new Set<string>();
+  const uniqueItems = items.filter((item) => {
+    if (!item.id || seenApiIds.has(item.id)) return false;
+    seenApiIds.add(item.id);
+    return true;
+  });
+
   return {
-    items,
+    items: uniqueItems,
     nextPageToken: data.nextPageToken || null,
     totalResults: data.pageInfo?.totalResults,
     source: 'youtube-data-api',
@@ -226,8 +233,16 @@ export async function searchWithPublicYoutube(
     console.error('Error parsing YouTube public search:', err);
   }
 
+  // Deduplicate items by ID
+  const seenIds = new Set<string>();
+  const uniqueItems = items.filter((item) => {
+    if (seenIds.has(item.id)) return false;
+    seenIds.add(item.id);
+    return true;
+  });
+
   return {
-    items,
+    items: uniqueItems,
     nextPageToken: nextContinuation,
     source: 'fallback-search',
   };

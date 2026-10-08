@@ -137,6 +137,94 @@ export function generateCsv(segments: TranscriptSegment[]): string {
   return header + rows.join('\n');
 }
 
+// Generate self-contained offline HTML document with search
+export function generateHtmlExport(segments: TranscriptSegment[], videoTitle: string, videoId: string): string {
+  const plain = generatePlainText(segments);
+  const rows = segments
+    .map(
+      (s) =>
+        `<div class="row" data-time="${Math.floor(s.offset / 1000)}">
+          <a class="time" href="https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(s.offset / 1000)}s" target="_blank">[${formatTime(s.offset)}]</a>
+          <span class="text">${s.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+        </div>`
+    )
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${videoTitle.replace(/</g, '&lt;')} — Transcript</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #1f2937; background: #fafafa; }
+    @media (prefers-color-scheme: dark) { body { background: #0f172a; color: #f1f5f9; } .row:hover { background: #1e293b; } }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .meta { font-size: 0.85rem; color: #6b7280; margin-bottom: 1.5rem; }
+    .search-box { width: 100%; padding: 10px 14px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; background: inherit; color: inherit; }
+    .row { display: flex; gap: 14px; padding: 6px 10px; border-radius: 6px; transition: background 0.15s; }
+    .row:hover { background: #f3f4f6; }
+    .time { font-family: ui-monospace, monospace; font-size: 0.85rem; color: #dc2626; text-decoration: none; font-weight: 600; shrink: 0; }
+    .time:hover { text-decoration: underline; }
+    .text { font-size: 0.95rem; }
+    mark { background: #fef08a; padding: 1px 3px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <h1>${videoTitle.replace(/</g, '&lt;')}</h1>
+  <div class="meta">
+    <span>YouTube: <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank">https://www.youtube.com/watch?v=${videoId}</a></span> ·
+    <span>Total Segments: ${segments.length}</span>
+  </div>
+  <input type="text" id="search" class="search-box" placeholder="Filter words in transcript..." oninput="filterTranscript()" />
+  <div id="transcript">${rows}</div>
+  <script>
+    function filterTranscript() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const rows = document.querySelectorAll('.row');
+      rows.forEach(r => {
+        const text = r.querySelector('.text').innerText.toLowerCase();
+        r.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// Generate formatted prompt for AI tools (ChatGPT, Claude, NotebookLM)
+export function generatePromptAi(
+  segments: TranscriptSegment[],
+  videoTitle: string,
+  videoId: string,
+  promptType: 'summary' | 'keypoints' | 'qa' = 'summary'
+): string {
+  const plainText = generatePlainText(segments);
+
+  let task = '';
+  if (promptType === 'summary') {
+    task = 'Provide an executive summary (TL;DR), followed by the 5 most important core takeaways and notable lessons.';
+  } else if (promptType === 'keypoints') {
+    task = 'Extract a detailed bulleted list of all key points, actionable advice, and memorable quotes with timestamps if applicable.';
+  } else {
+    task = 'Analyze the key themes discussed, compare the main arguments presented, and provide a study guide with review questions.';
+  }
+
+  return `You are an expert research synthesizer. Please thoroughly analyze this YouTube video transcript.
+
+VIDEO TITLE: "${videoTitle}"
+VIDEO URL: https://www.youtube.com/watch?v=${videoId}
+
+TASK:
+${task}
+
+--- TRANSCRIPT CONTENT ---
+${plainText.slice(0, 30000)}
+${plainText.length > 30000 ? '\n...[Transcript truncated for token limit]...' : ''}
+`;
+}
+
 // Browser file download trigger
 export function triggerFileDownload(filename: string, content: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType });

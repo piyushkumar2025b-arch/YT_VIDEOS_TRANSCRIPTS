@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Loader2, Film, RefreshCw } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader2, Film, RefreshCw, ArrowUp } from 'lucide-react';
 import { VideoCard } from './VideoCard.tsx';
 import type { VideoItem } from '../types/index.ts';
 
@@ -25,6 +25,20 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   query,
 }) => {
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Monitor window scroll for "Back to top" button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 600);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // IntersectionObserver for infinite scrolling
   useEffect(() => {
@@ -36,7 +50,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           onLoadMore();
         }
       },
-      { rootMargin: '300px' }
+      { rootMargin: '400px' }
     );
 
     const el = sentinelRef.current;
@@ -90,14 +104,14 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           Showing <span className="font-semibold text-neutral-900 tabular-nums">{videos.length}</span> videos
           {query ? ` for "${query}"` : ''}
         </span>
-        <span>Click any card to inspect & extract transcript</span>
+        <span className="hidden sm:inline">Click any card to inspect & extract transcript</span>
       </div>
 
       {/* Grid of video cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {videos.map((video) => (
+        {videos.map((video, idx) => (
           <VideoCard
-            key={video.id}
+            key={`${video.id}-${idx}`}
             video={video}
             isSelected={video.id === selectedVideoId}
             onSelect={onSelectVideo}
@@ -106,11 +120,11 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
       </div>
 
       {/* Infinite scrolling sentinel & Manual Load More */}
-      <div ref={sentinelRef} className="py-6 flex flex-col items-center justify-center">
+      <div ref={sentinelRef} className="py-8 flex flex-col items-center justify-center">
         {isLoadingMore ? (
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-neutral-600">
-            <Loader2 className="h-4 w-4 animate-spin text-neutral-800" />
-            <span>Loading more videos infinitely...</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-xs">
+            <Loader2 className="h-4 w-4 animate-spin text-neutral-900" />
+            <span>Fetching more videos infinitely...</span>
           </div>
         ) : hasMore ? (
           <button
@@ -128,6 +142,17 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           )
         )}
       </div>
+
+      {/* Floating Back to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg transition-transform hover:scale-105 hover:bg-neutral-800"
+          title="Back to top"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };

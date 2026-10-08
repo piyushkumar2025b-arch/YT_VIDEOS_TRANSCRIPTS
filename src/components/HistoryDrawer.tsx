@@ -62,7 +62,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       <div className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-white">
         {history.map((item) => (
           <div
-            key={item.video.id}
+            key={`${item.video.id}-${item.timestamp}`}
             onClick={() => onSelectHistoryItem(item)}
             className="flex items-center justify-between p-4 hover:bg-neutral-50 cursor-pointer transition-colors group"
           >
