@@ -1,0 +1,6 @@
+{
+  "name": "YouTube Video Search & Infinite Transcript Extractor",
+  "description": "Search YouTube videos with infinite scrolling, inspect video metadata, and extract full transcripts in copyable and downloadable formats (TXT, SRT, VTT, JSON, CSV).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
